@@ -65,6 +65,13 @@ def load_from_meta_file(save_dir: str, meta_filename='meta.json', transform_only
                        'embed': {'classpath': 'hanlp.layers.embeddings.fast_text.FastTextEmbedding',
                                  'filepath': identifier, 'src': 'token'},
                        'hanlp_version': version.__version__}, metapath)
+        elif identifier in {pretrained.classifiers.LID_176_FASTTEXT_SMALL,
+                            pretrained.classifiers.LID_176_FASTTEXT_BASE}:
+            save_dir = os.path.dirname(save_dir)
+            metapath = os.path.join(save_dir, 'config.json')
+            save_json({'classpath': 'hanlp.components.classifiers.fasttext_classifier.FastTextClassifier',
+                       'model_path': identifier,
+                       'hanlp_version': version.__version__}, metapath)
         else:
             raise FileNotFoundError(f'The identifier {save_dir} resolves to a nonexistent meta file {metapath}. {tips}')
     meta: dict = load_json(metapath)
@@ -75,6 +82,7 @@ def load_from_meta_file(save_dir: str, meta_filename='meta.json', transform_only
         # tf models are trained with version < 2.1. To migrate them to 2.1, map their classpath to new locations
         upgrade = {
             'hanlp.components.tok_tf.TransformerTokenizerTF': 'hanlp.components.tokenizers.tok_tf.TransformerTokenizerTF',
+            'hanlp.components.pos.RNNPartOfSpeechTagger': 'hanlp.components.taggers.pos_tf.RNNPartOfSpeechTaggerTF',
             'hanlp.components.pos_tf.RNNPartOfSpeechTaggerTF': 'hanlp.components.taggers.pos_tf.RNNPartOfSpeechTaggerTF',
             'hanlp.components.pos_tf.CNNPartOfSpeechTaggerTF': 'hanlp.components.taggers.pos_tf.CNNPartOfSpeechTaggerTF',
             'hanlp.components.ner_tf.TransformerNamedEntityRecognizerTF': 'hanlp.components.ner.ner_tf.TransformerNamedEntityRecognizerTF',
@@ -105,8 +113,8 @@ def load_from_meta_file(save_dir: str, meta_filename='meta.json', transform_only
             raise e from None
         else:
             raise ModuleNotFoundError(
-                'Some modules required by this model are missing. Please install the full version:'
-                '\n\n\tpip install hanlp[full]') from None
+                f'Some modules ({e.name} etc.) required by this model are missing. Please install the full version:'
+                '\n\n\tpip install hanlp[full] -U') from None
     except ValueError as e:
         if e.args and isinstance(e.args[0], str) and 'Internet connection' in e.args[0]:
             raise ConnectionError(
@@ -115,16 +123,17 @@ def load_from_meta_file(save_dir: str, meta_filename='meta.json', transform_only
                 from None
         raise e from None
     except Exception as e:
-        # Some users often install an incompatible tf and put the blame on HanLP. Teach them the basics.
-        try:
-            you_installed_wrong_versions, extras = check_version_conflicts(extras=('full',) if tf_model else None)
-        except:
-            you_installed_wrong_versions, extras = None, None
-        if you_installed_wrong_versions:
-            raise version.NotCompatible(you_installed_wrong_versions + '\nPlease reinstall HanLP in the right way:' +
-                                        '\n\n\tpip install --upgrade hanlp' + (
-                                            f'[{",".join(extras)}]' if extras else '')) from None
-        eprint(f'Failed to load {identifier}.')
+        if not e.__traceback__.tb_frame.f_code.co_filename.startswith(os.path.dirname(os.path.dirname(__file__))):
+            # Some users often install an incompatible tf and put the blame on HanLP. Teach them the basics.
+            try:
+                you_installed_wrong_versions, extras = check_version_conflicts(extras=('full',))
+            except Exception as check_e:
+                you_installed_wrong_versions, extras = None, None
+            if you_installed_wrong_versions:
+                raise version.NotCompatible(f'{you_installed_wrong_versions}\nPlease reinstall HanLP in the proper way:'
+                                            '\n\n\tpip install --upgrade hanlp' + (
+                                                f'[{",".join(extras)}]' if extras else '')) from None
+        eprint(f'Failed to load {identifier}')
         from pkg_resources import parse_version
         model_version = meta.get("hanlp_version", '2.0.0-alpha.0')
         if model_version == '2.0.0':  # Quick fix: the first version used a wrong string
@@ -143,7 +152,8 @@ def load_from_meta_file(save_dir: str, meta_filename='meta.json', transform_only
                 f'Please upgrade HanLP with:\n'
                 f'\n\tpip install --upgrade hanlp\n')
         eprint(
-            'If the problem still persists, please submit an issue to https://github.com/hankcs/HanLP/issues\n'
+            'If the problem persists, please submit an issue to '
+            'https://github.com/hankcs/HanLP/issues/new?labels=bug&template=bug_report.md\n'
             'When reporting an issue, make sure to paste the FULL ERROR LOG below.')
 
         eprint(f'{"ERROR LOG BEGINS":=^80}')
@@ -156,15 +166,23 @@ def load_from_meta_file(save_dir: str, meta_filename='meta.json', transform_only
             try:
                 import tensorflow
                 tf_version = tensorflow.__version__
+                eprint(f'TensorFlow: {tf_version}')
             except ModuleNotFoundError:
                 tf_version = 'not installed'
-            eprint(f'TensorFlow: {tf_version}')
+                eprint(f'TensorFlow: {tf_version}')
+            except Exception as tf_e:
+                eprint(f'TensorFlow cannot be imported due to {tf_e.__class__.__name__}: {e}. '
+                       f'Note this is not a bug of HanLP, but rather a compatability issue caused by TensorFlow.')
         eprint(f'HanLP: {version.__version__}')
         import sys
         sys.stderr.flush()
         try:
-            if e.args and isinstance(e.args, tuple) and isinstance(e.args[0], str):
-                e.args = (e.args[0] + f'\n{"ERROR LOG ENDS":=^80}',) + e.args[1:]
+            if e.args and isinstance(e.args, tuple):
+                for i in range(len(e.args)):
+                    if isinstance(e.args[i], str):
+                        from hanlp_common.util import set_tuple_with
+                        e.args = set_tuple_with(e.args, e.args[i] + f'\n{"ERROR LOG ENDS":=^80}', i)
+                        break
         except:
             pass
         raise e from None

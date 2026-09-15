@@ -57,8 +57,8 @@ class BiaffineSemanticDependencyParser(BiaffineDependencyParser):
     @staticmethod
     def convert_to_3d_mask(arc_scores, mask):
         # 3d masks
-        mask = mask.unsqueeze(-1).expand_as(arc_scores)
-        mask = mask & mask.transpose(1, 2)
+        mask = mask.unsqueeze(-1).expand_as(arc_scores).clone()
+        mask[:, :, 1:] = mask[:, :, 1:] & mask.transpose(1, 2)[:, :, 1:]  # Keep the 1st colum because it predicts root
         return mask
 
     def compute_loss(self, arc_scores, rel_scores, arcs, rels, mask: torch.BoolTensor, criterion, batch=None):
@@ -111,6 +111,7 @@ class BiaffineSemanticDependencyParser(BiaffineDependencyParser):
 
         if self.config.apply_constraint:
             if self.config.get('single_root', False):
+                arc_scores[~mask] = -inf  # the biaffine decoder doesn't apply 3d mask for now
                 root_mask = arc_scores[:, :, 0].argmax(dim=-1).unsqueeze_(-1).expand_as(arc_scores[:, :, 0])
                 arc_scores[:, :, 0] = -inf
                 arc_scores[:, :, 0].scatter_(dim=-1, index=root_mask, value=inf)
@@ -122,6 +123,7 @@ class BiaffineSemanticDependencyParser(BiaffineDependencyParser):
             arc_scores_T = arc_scores.transpose(-1, -2)
             arc = ((arc_scores > 0) & (arc_scores_T < arc_scores))
             if self.config.get('no_zero_head', False):
+                arc_scores_T[arc] = -inf  # avoid cycle between a pair of nodes
                 arc_scores_fix = arc_scores_T.argmax(dim=-2).unsqueeze_(-1).expand_as(arc_scores)
                 arc.scatter_(dim=-1, index=arc_scores_fix, value=True)
         else:

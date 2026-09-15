@@ -3,8 +3,8 @@
 <h2 align="center">HanLP: Han Language Processing</h2>
 
 <div align="center">
-    <a href="https://github.com/hankcs/HanLP/actions">
-       <img alt="Run Tests" src="https://github.com/hankcs/hanlp/actions/workflows/python-package.yml/badge.svg?branch=master">
+    <a href="https://github.com/hankcs/HanLP/actions/workflows/unit-tests.yml">
+       <img alt="Unit Tests" src="https://github.com/hankcs/hanlp/actions/workflows/unit-tests.yml/badge.svg?branch=master">
     </a>
     <a href="https://pypi.org/project/hanlp/">
         <img alt="PyPI Version" src="https://img.shields.io/pypi/v/hanlp?color=blue">
@@ -13,7 +13,7 @@
         <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/hanlp?colorB=blue">
     </a>
     <a href="https://pepy.tech/project/hanlp">
-        <img alt="Downloads" src="https://pepy.tech/badge/hanlp">
+        <img alt="Downloads" src="https://static.pepy.tech/badge/hanlp">
     </a>
     <a href="https://colab.research.google.com/drive/1KPX6t1y36TOzRIeB4Kt3uJ1twuj6WuFv?usp=sharing">
         <img alt="Open In Colab" src="https://file.hankcs.com/img/colab-badge.svg">
@@ -27,12 +27,11 @@
     <a href="https://bbs.hankcs.com/">Forum</a>
 </h4>
 
-The multilingual NLP library for researchers and companies, built on PyTorch and TensorFlow 2.x, for advancing
-state-of-the-art deep learning techniques in both academia and industry. HanLP was designed from day one to be
+HanLP is the multilingual NLP library designed for researchers and enterprises, built on PyTorch and TensorFlow 2.x to advance state-of-the-art deep learning techniques in academia and industry. HanLP was designed from day one to be
 efficient, user-friendly and extendable.
 
-Thanks to open-access corpora like Universal Dependencies and OntoNotes, HanLP 2.1 now offers 10 joint tasks on 104
-languages: tokenization, lemmatization, part-of-speech tagging, token feature extraction, dependency parsing,
+Thanks to open-access corpora like Universal Dependencies and OntoNotes, HanLP 2.1 now offers 10 joint tasks on [130
+languages](https://hanlp.hankcs.com/docs/api/hanlp/pretrained/mtl.html#hanlp.pretrained.mtl.UD_ONTONOTES_TOK_POS_LEM_FEA_NER_SRL_DEP_SDP_CON_MMINILMV2L6): tokenization, lemmatization, part-of-speech tagging, token feature extraction, dependency parsing,
 constituency parsing, semantic role labeling, semantic dependency parsing, abstract meaning representation (AMR)
 parsing.
 
@@ -49,46 +48,45 @@ the [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) licens
   <summary>Click to expand tutorials for RESTful APIs</summary>
 
   ### Python
-  
+
   ```bash
   pip install hanlp_restful
   ```
-  
+
   Create a client with our API endpoint and your auth.
-  
+
   ```python
   from hanlp_restful import HanLPClient
-  HanLP = HanLPClient('https://hanlp.hankcs.com/api', auth=None, language='mul') # mul: multilingual, zh: Chinese
+  HanLP = HanLPClient('https://hanlp.hankcs.com/api', auth=None, language='mul') # Support en, ja, zh, mul
   ```
-  
+
   ### Java
-  
+
   Insert the following dependency into your `pom.xml`.
-  
+
   ```xml
   <dependency>
     <groupId>com.hankcs.hanlp.restful</groupId>
     <artifactId>hanlp-restful</artifactId>
-    <version>0.0.7</version>
+    <version>0.0.15</version>
   </dependency>
   ```
-  
-  Create a client with our API endpoint and your auth.
-  
-  ```java
-  HanLPClient HanLP = new HanLPClient("https://hanlp.hankcs.com/api", null, "mul"); // mul: multilingual, zh: Chinese
 
+  Create a client with our API endpoint and your auth.
+
+  ```java
+  HanLPClient HanLP = new HanLPClient("https://hanlp.hankcs.com/api", null, "mul"); // Support en, ja, zh, mul
   ```
 
   ### Quick Start
-  
+
   No matter which language you use, the same interface can be used to parse a document.
-  
+
   ```python
   HanLP.parse(
       "In 2021, HanLPv2.1 delivers state-of-the-art multilingual NLP techniques to production environments. 2021年、HanLPv2.1は次世代の最先端多言語NLP技術を本番環境に導入します。2021年 HanLPv2.1为生产环境带来次世代最先进的多语种NLP技术。")
   ```
-  
+
   See [docs](https://hanlp.hankcs.com/docs/tutorial.html) for visualization, annotation guidelines and more details.
 
 </details>
@@ -100,7 +98,7 @@ the [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) licens
 pip install hanlp
 ```
 
-HanLP requires Python 3.6 or later. GPU/TPU is suggested but not mandatory.
+HanLP requires Python 3.6 or higher. While GPU or TPU acceleration is recommended, it is not mandatory.
 
 ### Quick Start
 
@@ -115,8 +113,8 @@ print(HanLP(['In 2021, HanLPv2.1 delivers state-of-the-art multilingual NLP tech
 
 - In particular, the Python `HanLPClient` can also be used as a callable function following the same semantics.
   See [docs](https://hanlp.hankcs.com/docs/tutorial.html) for visualization, annotation guidelines and more details.
-- To process Chinese or Japanese, HanLP provides mono-lingual models in each language which significantly outperform the
-  multi-lingual model. See [docs](https://hanlp.hankcs.com/docs/api/hanlp/pretrained/index.html) for the list of models.
+- To process English, Chinese or Japanese, HanLP provides mono-lingual models in each language which significantly outperform the
+  multilingual model. See [docs](https://hanlp.hankcs.com/docs/api/hanlp/pretrained/index.html) for the list of models.
 
 ## Train Your Own Models
 
@@ -125,7 +123,7 @@ snippet below shows how to surpass the state-of-the-art tokenizer in 6 minutes.
 
 ```python
 tokenizer = TransformerTaggingTokenizer()
-save_dir = 'data/model/cws/sighan2005_pku_bert_base_96.70'
+save_dir = 'data/model/cws/sighan2005_pku_bert_base_96.7'
 tokenizer.fit(
     SIGHAN2005_PKU_TRAIN_ALL,
     SIGHAN2005_PKU_TEST,  # Conventionally, no devset is used. See Tian et al. (2020).
@@ -140,12 +138,12 @@ tokenizer.fit(
     warmup_steps=0.1,
     weight_decay=0.01,
     word_dropout=0.1,
-    seed=1609836303,
+    seed=1660853059,
 )
 tokenizer.evaluate(SIGHAN2005_PKU_TEST, save_dir)
 ```
 
-The result is guaranteed to be `96.70` as the random seed is fixed. Different from some overclaiming papers and
+The result is guaranteed to be `96.73` as the random seed is fixed. Different from some overclaiming papers and
 projects, HanLP promises every single digit in our scores is reproducible. Any issues on reproducibility will be treated
 and solved as a top-priority fatal bug.
 
@@ -163,7 +161,7 @@ The performance of multi-task learning models is shown in the following table.
 
 ## Citing
 
-If you use HanLP in your research, please cite this repository.
+If you use HanLP in your research, please cite [our EMNLP paper](https://aclanthology.org/2021.emnlp-main.451):
 
 ```bibtex
 @inproceedings{he-choi-2021-stem,

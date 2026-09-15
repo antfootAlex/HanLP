@@ -117,6 +117,7 @@ The following table is a subset of CSDP but offers some examples to illustrate t
 | 范围角色   | Sco           | Scope              | 产品应该比质量 (比 –> 质量)           |
 | 数量角色   | Quan          | Quantity           | 一年有365天 (有 –> 天)            |
 | 数量数组   | Qp            | Quantity-phrase    | 三本书 (三 –> 本)                |
+| 类属标记   | mQuaf | Qualifier | 一**种**方法（“种”作为类属量词 → mQuaf） |
 | 频率角色   | Freq          | Frequency          | 他每天看书 (每天 <– 看)             |
 | 顺序角色   | Seq           | Sequence           | 他跑第一 (跑 –> 第一)              |
 | 描写角色   | Desc(Feat)    | Description        | 他长得胖 (长 –> 胖)               |
@@ -144,7 +145,7 @@ The following table is a subset of CSDP but offers some examples to illustrate t
 | 选取关系   | ePref         | event Preference   | 不如，宁愿                       |
 | 总括关系   | eSum          | event Summary      | 总而言之                        |
 | 分叙关系   | eRect         | event Recount      | 例如，比方说                      |
-| 连词标记   | mConj         | Recount Marker     | 和，或                         |
+| 连词标记   | mConj         | Conjunction        | 和，或                         |
 | 的字标记   | mAux          | Auxiliary          | 的，地，得                       |
 | 介词标记   | mPrep         | Preposition        | 把，被                         |
 | 语气标记   | mTone         | Tone               | 吗，呢                         |

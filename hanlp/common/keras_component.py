@@ -4,6 +4,7 @@
 import logging
 import math
 import os
+import sys
 from abc import ABC, abstractmethod
 from typing import Optional, List, Any, Dict
 
@@ -249,15 +250,23 @@ class KerasComponent(Component, ABC):
         return self.model, optimizer, loss, metrics
 
     def compile_model(self, optimizer, loss, metrics):
-        self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics, run_eagerly=self.config.run_eagerly)
+        try:
+            self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics, run_eagerly=self.config.run_eagerly)
+        except ValueError:
+            from keras.saving.object_registration import CustomObjectScope
+            with CustomObjectScope({'adamweightdecay': AdamWeightDecay}):
+                self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics, run_eagerly=self.config.run_eagerly)
 
-    def build_optimizer(self, optimizer, **kwargs):
+    def build_optimizer(self, optimizer, **kwargs) -> tf.keras.optimizers.Optimizer:
         if isinstance(optimizer, (str, dict)):
             custom_objects = {'AdamWeightDecay': AdamWeightDecay}
-            optimizer: tf.keras.optimizers.Optimizer = tf.keras.utils.deserialize_keras_object(optimizer,
-                                                                                               module_objects=vars(
-                                                                                                   tf.keras.optimizers),
-                                                                                               custom_objects=custom_objects)
+            try:
+                optimizer = tf.keras.utils.deserialize_keras_object(optimizer, module_objects=vars(tf.keras.optimizers),
+                                                                    custom_objects=custom_objects)
+            except ValueError:
+                optimizer['config'].pop('decay', None)
+                optimizer = tf.keras.utils.deserialize_keras_object(optimizer, module_objects=vars(tf.keras.optimizers),
+                                                                    custom_objects=custom_objects)
         self.config.optimizer = tf.keras.utils.serialize_keras_object(optimizer)
         return optimizer
 
@@ -291,6 +300,10 @@ class KerasComponent(Component, ABC):
     def fit(self, trn_data, dev_data, save_dir, batch_size, epochs, run_eagerly=False, logger=None, verbose=True,
             finetune: str = None, **kwargs):
         self._capture_config(locals())
+        if sys.version_info >= (3, 10):
+            logger.warning(f'Training with TensorFlow {tf.__version__} has not been tested on Python '
+                           f'{sys.version_info.major}.{sys.version_info.minor}. Please downgrade to '
+                           f'Python<=3.9 in case any compatibility issues arise.')
         self.transform = self.build_transform(**self.config)
         if not save_dir:
             save_dir = tempdir_human()
@@ -429,7 +442,15 @@ class KerasComponent(Component, ABC):
         results = []
         num_samples = 0
         data_is_list = isinstance(data, list)
-        for idx, batch in enumerate(dataset):
+        # Iterating one step past the end of a tf.data.Dataset makes TensorFlow 2.16
+        # emit a noisy local_rendezvous OUT_OF_RANGE warning. For materialized inputs
+        # the sample count tells us when the final batch has already been consumed.
+        iterator = iter(dataset)
+        while not data_is_list or num_samples < len(data):
+            try:
+                batch = next(iterator)
+            except StopIteration:
+                break
             samples_in_batch = tf.shape(batch[-1] if isinstance(batch[-1], tf.Tensor) else batch[-1][0])[0]
             if data_is_list:
                 inputs = data[num_samples:num_samples + samples_in_batch]
